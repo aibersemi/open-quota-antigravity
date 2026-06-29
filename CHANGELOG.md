@@ -2,17 +2,12 @@
 
 All notable changes to **Open Quota Antigravity** are documented here.
 
-## [Unreleased]
-
 ## [1.1.4] — 2026-06-30
 
 ### Fixed
 - Fixed missing Changelog tab in Open VSX and VS Code Marketplace by including `CHANGELOG.md` in the `.vsix` bundle.
 
 ## [1.1.3] — 2026-06-30
-
-### Added
-- Added `AGENTS.md` to define strict AI execution rules, publishing workflows, and language standards.
 
 ### Changed
 - Renamed the main configuration key from `quotaAntigravityFree.refreshInterval` to `openQuotaAntigravity.refreshInterval` to align with the official extension name.
