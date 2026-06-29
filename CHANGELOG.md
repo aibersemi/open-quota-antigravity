@@ -4,6 +4,11 @@ All notable changes to **Open Quota Antigravity** are documented here.
 
 ## [Unreleased]
 
+## [1.1.4] — 2026-06-30
+
+### Fixed
+- Fixed missing Changelog tab in Open VSX and VS Code Marketplace by including `CHANGELOG.md` in the `.vsix` bundle.
+
 ## [1.1.3] — 2026-06-30
 
 ### Added
