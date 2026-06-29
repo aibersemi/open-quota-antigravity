@@ -12,7 +12,7 @@
 <br/>
 
 <div align="center">
-  <img src="https://github.com/aibersemi/open-quota-antigravity/raw/HEAD/demo.webp" alt="Open Quota Antigravity Demo" width="800" />
+  <img src="https://github.com/aibersemi/open-quota-antigravity/raw/HEAD/demo.webp" alt="Open Quota Antigravity Demo" width="600" />
 </div>
 
 ---
