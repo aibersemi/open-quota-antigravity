@@ -99,7 +99,7 @@ function startPolling() {
     // Update awal agar status bar langsung terisi
     checkQuotaGuarded().then(updateStatusBar);
 
-    const config = vscode.workspace.getConfiguration('quotaAntigravityFree');
+    const config = vscode.workspace.getConfiguration('openQuotaAntigravity');
     let intervalSec = Number(config.get('refreshInterval'));
     if (!Number.isFinite(intervalSec) || intervalSec <= 0) intervalSec = DEFAULT_REFRESH_INTERVAL_SEC;
     if (intervalSec < MIN_REFRESH_INTERVAL_SEC) intervalSec = MIN_REFRESH_INTERVAL_SEC;
@@ -256,7 +256,7 @@ function updateStatusBar(data) {
                             const min = String(d.getMinutes()).padStart(2, '0');
                             dateStr = `${day}/${month} ${hour}:${min}`;
                         }
-                    } catch (_) { /* date parse gagal, tetap pakai "—" */ }
+                    } catch { /* Date parse failed; keep fallback display. */ }
                 }
 
                 const prefix = pct > 0 ? "+ " : "- ";
@@ -311,7 +311,9 @@ async function checkQuota() {
                 }
             }
         }
-    } catch (e) { }
+    } catch {
+        /* Best-effort quota probe failed; caller handles null result. */
+    }
     return null;
 }
 
@@ -357,7 +359,7 @@ async function findProcesses() {
                     results.push({ pid: p.ProcessId, cmdline: p.CommandLine });
                 }
             });
-        } catch (e) {
+        } catch {
             // Fallback to wmic
             try {
                 const wmicOut = await execAsync(`wmic process where "CommandLine like '%${safeSearchString}%'" get ProcessId,CommandLine /format:csv`);
@@ -374,7 +376,7 @@ async function findProcesses() {
                         if (!isNaN(pid) && pid > 0) results.push({ pid, cmdline });
                     }
                 });
-            } catch (ign) { }
+            } catch { /* WMIC fallback failed; return any collected results. */ }
         }
     } else {
         // Linux/Mac
@@ -395,7 +397,7 @@ async function findProcesses() {
                     if (results.length > 0) {
                         return results.filter(p => parseCsrfToken(p.cmdline));
                     }
-                } catch (e) { }
+                } catch { /* pgrep unavailable or failed; continue with ps fallback. */ }
             }
 
             // Fallback: ps -A jika pgrep tidak tersedia
@@ -412,7 +414,7 @@ async function findProcesses() {
                     }
                 }
             }
-        } catch (e) { }
+        } catch { /* Process lookup failed; return any collected results. */ }
     }
     return results.filter(p => parseCsrfToken(p.cmdline));
 }
@@ -445,7 +447,7 @@ async function getPorts(pid) {
                     if (!isNaN(port)) ports.add(port);
                 });
             }
-        } catch (e) { /* fallback ke netstat */ }
+        } catch { /* PowerShell port lookup failed; fall back to netstat. */ }
         // Metode 2 (Fallback): netstat -ano jika PowerShell gagal atau tidak ada port ditemukan
         if (ports.size === 0) {
             try {
@@ -466,7 +468,7 @@ async function getPorts(pid) {
                         }
                     }
                 }
-            } catch (e) { }
+            } catch { /* netstat fallback failed; return any collected ports. */ }
         }
     } else {
         try {
@@ -484,7 +486,7 @@ async function getPorts(pid) {
                     }
                 }
             }
-        } catch (e) {
+        } catch {
             // Fallback di Linux: gunakan ss jika lsof tidak tersedia
             if (process.platform === 'linux') {
                 try {
@@ -503,7 +505,7 @@ async function getPorts(pid) {
                             }
                         }
                     }
-                } catch (ign) { }
+                } catch { /* ss fallback failed; return any collected ports. */ }
             }
         }
     }
@@ -551,7 +553,7 @@ function fetchQuotaWithProtocol(protocol, port, csrfToken) {
                 try {
                     if (res.statusCode === 200) done(JSON.parse(data));
                     else done(null);
-                } catch (e) { done(null); }
+                } catch { done(null); }
             });
         });
         req.on('error', () => done(null));
@@ -643,7 +645,7 @@ function formatDetailText(data) {
                     if (d instanceof Date && !isNaN(d.getTime()) && d.getTime() > 0) {
                         resetStr = ` (reset ${d.toLocaleTimeString()})`;
                     }
-                } catch (_) { /* ignore */ }
+                } catch { /* Date parse failed; keep reset text empty. */ }
             }
             return `${m.label || 'Unknown'}: ${pct.toFixed(1)}%${resetStr}`;
         }).join('\n');

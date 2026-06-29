@@ -54,7 +54,7 @@
 
 | Setting | What it does | Default |
 | :--- | :--- | :--- |
-| `quotaAntigravityFree.refreshInterval` | How often (in seconds) to check for quota updates (min: 30, default 5 minutes). | `300` |
+| `openQuotaAntigravity.refreshInterval` | How often (in seconds) to check for quota updates (min: 30, default 5 minutes). | `300` |
 
 ---
 
