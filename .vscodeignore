@@ -1,0 +1,10 @@
+.vscode/**
+.vscode-test/**
+out/**
+node_modules/**
+src/**
+.gitignore
+*.vsix
+.DS_Store
+Thumbs.db
+demo.webp

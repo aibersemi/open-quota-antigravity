@@ -1,0 +1,66 @@
+{
+	"name": "open-quota-antigravity",
+	"displayName": "Open Quota Antigravity",
+	"description": "Monitor Antigravity (Codeium/Windsurf) quota in real-time from the status bar.",
+	"version": "1.1.2",
+	"icon": "icon.webp",
+	"publisher": "aibersemi",
+	"engines": {
+		"vscode": ">=1.85.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"extensionKind": [
+		"workspace"
+	],
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"main": "./extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "open-quota-antigravity.refresh",
+				"title": "Open Quota Antigravity: Refresh Status"
+			},
+			{
+				"command": "open-quota-antigravity.showDetail",
+				"title": "Open Quota Antigravity: Show Details"
+			},
+			{
+				"command": "open-quota-antigravity.reload",
+				"title": "Open Quota Antigravity: Reload"
+			},
+			{
+				"command": "open-quota-antigravity.refreshSilent",
+				"title": "Open Quota Antigravity: Refresh (Silent)"
+			}
+		],
+		"configuration": {
+			"title": "Open Quota Antigravity",
+			"properties": {
+				"quotaAntigravityFree.refreshInterval": {
+					"type": "number",
+					"default": 300,
+					"description": "Refresh interval in seconds (min: 30, default: 300 / 5 minutes)"
+				}
+			}
+		}
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/aibersemi/open-quota-antigravity.git"
+	},
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"keywords": ["quota", "antigravity", "codeium", "windsurf", "monitor", "status bar"],
+	"author": "aibersemi",
+	"type": "commonjs",
+	"bugs": {
+		"url": "https://github.com/aibersemi/open-quota-antigravity/issues"
+	},
+	"homepage": "https://github.com/aibersemi/open-quota-antigravity#readme"
+}

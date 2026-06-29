@@ -1,0 +1,19 @@
+# Dependency directories
+node_modules/
+
+# Build outputs
+out/
+dist/
+*.vsix
+
+# IDE / Editor folders
+.vscode/
+.history/
+.vscode-test/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
