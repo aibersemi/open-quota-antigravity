@@ -1,8 +1,19 @@
-# Open Quota Antigravity
+<h1 align="center">Open Quota Antigravity</h1>
+
+<p align="center">
+  <a href="https://github.com/aibersemi/open-quota-antigravity"><img src="https://img.shields.io/github/package-json/v/aibersemi/open-quota-antigravity?style=flat-square&color=007ACC" alt="Version" /></a>
+  <a href="https://github.com/aibersemi/open-quota-antigravity/blob/main/LICENSE"><img src="https://img.shields.io/github/license/aibersemi/open-quota-antigravity?style=flat-square&color=2EA043" alt="License" /></a>
+  <a href="https://code.visualstudio.com/"><img src="https://img.shields.io/badge/VS%20Code-%E2%89%A51.85.0-007ACC?style=flat-square&logo=visualstudiocode" alt="VS Code" /></a>
+  <img src="https://img.shields.io/badge/Platform-Win%20%7C%20Mac%20%7C%20Linux-555555?style=flat-square" alt="Platform" />
+</p>
 
 **Open Quota Antigravity** is a lightweight VS Code extension that lets you monitor your Antigravity (Codeium/Windsurf) quota in real-time, right from your status bar. No more guessing when your premium models will reset!
 
-![Demo](https://github.com/aibersemi/open-quota-antigravity/raw/HEAD/demo.webp)
+<br/>
+
+<div align="center">
+  <img src="https://github.com/aibersemi/open-quota-antigravity/raw/HEAD/demo.webp" alt="Open Quota Antigravity Demo" width="800" />
+</div>
 
 ---
 
