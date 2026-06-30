@@ -2,8 +2,6 @@
 
 All notable changes to **Open Quota Antigravity** are documented here.
 
-## [Unreleased]
-
 ## [1.1.5] — 2026-06-30
 
 ### Fixed
