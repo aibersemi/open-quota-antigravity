@@ -12,4 +12,4 @@ demo.webp
 AGENTS.md
 eslint.config.js
 package-lock.json
-
+.github/**
