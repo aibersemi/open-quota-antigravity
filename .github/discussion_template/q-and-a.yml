@@ -1,0 +1,15 @@
+name: ❓ Q&A
+description: Ask a question about usage or configuration
+title: "[Question]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about Open Quota Antigravity? Ask here!
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Write your question clearly.
+    validations:
+      required: true

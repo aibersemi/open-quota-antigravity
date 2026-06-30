@@ -2,6 +2,11 @@
 
 All notable changes to **Open Quota Antigravity** are documented here.
 
+## [Unreleased]
+
+### Fixed
+- Fixed a security issue for Google Antigravity IDE 2.0 compatibility
+
 ## [1.1.4] — 2026-06-30
 
 ### Fixed

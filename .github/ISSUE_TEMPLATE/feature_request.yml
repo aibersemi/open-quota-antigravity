@@ -1,0 +1,29 @@
+name: ✨ Feature Request
+description: Suggest an idea or a new feature for this extension
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a brilliant idea? Share it with us!
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to be solved
+      description: Is your feature request related to a problem? Please explain.
+      placeholder: I am always frustrated when...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Explain the feature or solution you would like clearly.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Are there any other alternatives you have tried?

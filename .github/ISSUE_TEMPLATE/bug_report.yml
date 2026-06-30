@@ -1,0 +1,42 @@
+name: 🐛 Bug Report
+description: Create a report to help us improve this extension
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug in the Open Quota Antigravity extension!
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: Describe the bug clearly and concisely.
+      placeholder: Example - When I press the refresh button, the quota doesn't update...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce the bug?
+      value: |
+        1. Open VS Code
+        2. Click the status bar button '...'
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: vscode_version
+    attributes:
+      label: VS Code Version
+      description: The version of VS Code you are using (e.g., 1.85.0)
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      description: The operating system you are using (e.g., Windows 11, Ubuntu 22.04, macOS 14)
+    validations:
+      required: true

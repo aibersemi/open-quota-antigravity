@@ -1,0 +1,15 @@
+name: 💡 Ideas
+description: Share ideas or feature requests for Open Quota Antigravity
+title: "[Idea]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a brilliant idea? Share and discuss it with the community here!
+  - type: textarea
+    id: idea
+    attributes:
+      label: Idea Description
+      description: Explain your idea in detail.
+    validations:
+      required: true

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussions & Questions
+    url: https://github.com/aibersemi/open-quota-antigravity/discussions/new?category=q-a
+    about: Have a question about how this extension works? Ask here!
+  - name: 🔒 Security Vulnerability Report
+    url: https://github.com/aibersemi/open-quota-antigravity/security/advisories/new
+    about: Report security vulnerabilities privately to be addressed immediately without exposing other users.
