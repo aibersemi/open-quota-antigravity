@@ -2,7 +2,7 @@
 	"name": "open-quota-antigravity",
 	"displayName": "Open Quota Antigravity",
 	"description": "Monitor Antigravity (Codeium/Windsurf) quota in real-time from the status bar.",
-	"version": "1.1.4",
+	"version": "1.1.5",
 	"icon": "icon.webp",
 	"publisher": "aibersemi",
 	"engines": {
