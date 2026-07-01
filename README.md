@@ -2,8 +2,8 @@
 
 <p align="center">
   <a href="https://github.com/aibersemi/open-quota-antigravity"><img src="https://img.shields.io/github/package-json/v/aibersemi/open-quota-antigravity?style=flat-square&color=007ACC" alt="Version" /></a>
-  <a href="https://github.com/aibersemi/open-quota-antigravity/blob/main/LICENSE"><img src="https://img.shields.io/github/license/aibersemi/open-quota-antigravity?style=flat-square&color=2EA043" alt="License" /></a>
-  <a href="https://saweria.co/aibersemi"><img src="https://img.shields.io/badge/Support-Saweria-FF5E8A?style=flat-square" alt="Support on Saweria" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2EA043?style=flat-square" alt="License" /></a>
+  <a href="https://saweria.co/aibersemi"><img src="https://img.shields.io/badge/Support-Saweria-F97316?style=flat-square" alt="Support on Saweria" /></a>
   <a href="https://code.visualstudio.com/"><img src="https://img.shields.io/badge/VS%20Code-%E2%89%A51.85.0-007ACC?style=flat-square&logo=visualstudiocode" alt="VS Code" /></a>
   <img src="https://img.shields.io/badge/Platform-Win%20%7C%20Mac%20%7C%20Linux-555555?style=flat-square" alt="Platform" />
 </p>
