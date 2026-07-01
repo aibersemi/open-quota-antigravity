@@ -53,6 +53,9 @@
 		"type": "git",
 		"url": "git+https://github.com/aibersemi/open-quota-antigravity.git"
 	},
+	"sponsor": {
+		"url": "https://saweria.co/aibersemi"
+	},
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"lint": "eslint extension.js --max-warnings=0",

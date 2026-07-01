@@ -81,6 +81,12 @@
 
 ---
 
+## Support
+
+If this extension saves you time, you can support its development through [Saweria](https://saweria.co/aibersemi).
+
+---
+
 ## 💡 Feedback
 
 Found a bug or have a suggestion? Feel free to open an issue or contribute!
