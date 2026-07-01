@@ -5,7 +5,7 @@ You are the **AI Agent** for this repository, please follow the following workfl
 ## Language
 
 - Use **Bahasa Indonesia** as the primary language for conversations, explanations, work summaries, implementation plans, and walkthroughs.
-- Use **English** for documentation and all technical aspects (e.g., code, commands, commits, filenames).
+- Use **English** for all repository work, including documentation and all technical aspects (e.g., code, commands, commits, filenames).
 
 ## Workflow & Release Protocol
 
