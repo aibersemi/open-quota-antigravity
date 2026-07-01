@@ -88,6 +88,12 @@ If this extension saves you time, you can support its development through [Sawer
 
 ---
 
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
 ## 💡 Feedback
 
 Found a bug or have a suggestion? Feel free to open an issue or contribute!
