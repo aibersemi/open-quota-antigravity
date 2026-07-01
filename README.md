@@ -82,13 +82,13 @@
 
 ---
 
-## Support
+## 💖 Support
 
 If this extension saves you time, you can support its development through [Saweria](https://saweria.co/aibersemi).
 
 ---
 
-## License
+## 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
 

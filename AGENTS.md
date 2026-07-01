@@ -12,7 +12,7 @@ You are the **AI Agent** for this repository, please follow the following workfl
 - **NEVER** automatically publish to Open VSX or create a GitHub Release after modifying code.
 - **NEVER** automatically run `git commit` or `git push` unless explicitly requested.
 - Always wait for explicit permission and instruction before initiating the release or publish workflow.
-- Whenever you make code modifications or feature updates, you **MUST** document them in `CHANGELOG.md` under an `## [Unreleased]` heading. (If the heading does not exist yet, create it at the top).
+- Whenever you make code modifications or feature updates, you **MUST** document them in `CHANGELOG.md` under an `## [Unreleased]` heading. (If the heading does not exist yet, create it at the top). Cosmetic documentation-only changes do **not** require a `CHANGELOG.md` update.
 - Before initiating any release workflow, you **MUST** rename the existing `## [Unreleased]` heading to the target release version and current date (e.g., `## [1.1.3] — YYYY-MM-DD`). Ensure that when instructed to release, the existing `## [Unreleased]` heading in `CHANGELOG.md` is removed and no longer exists (do not recreate it; it is exclusively for documenting changes prior to a release).
 
 ## Publishing to Open VSX (Marketplace)
