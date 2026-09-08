@@ -2,6 +2,13 @@
 
 All notable changes to **Open Quota Antigravity** are documented here.
 
+## [1.1.6] — 2026-09-09
+
+### Removed
+- Removed Dependabot configuration (`.github/dependabot.yml`).
+- Removed stale issues and pull requests workflow (`.github/workflows/stale.yml`).
+- Removed CI lint check workflow (`.github/workflows/ci.yml`).
+
 ## [1.1.5] — 2026-06-30
 
 ### Fixed
