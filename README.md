@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/Platform-Win%20%7C%20Mac%20%7C%20Linux-555555?style=flat-square" alt="Platform" />
 </p>
 
-**Open Quota Antigravity** is a lightweight VS Code extension that lets you monitor your Antigravity (Codeium/Windsurf) quota in real-time, right from your status bar. No more guessing when your premium models will reset!
+**Open Quota Antigravity** is a lightweight VS Code extension that lets you monitor your Antigravity quota in real-time, right from your status bar. No more guessing when your premium models will reset!
 
 <br/>
 

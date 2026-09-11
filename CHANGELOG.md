@@ -2,12 +2,18 @@
 
 All notable changes to **Open Quota Antigravity** are documented here.
 
+## [1.1.7] — 2026-09-11
+
+### Changed
+- Introduced a new design for the status bar hover tooltip layout, featuring clean modern Markdown cards without circle icons, prompt/flow credits clutter, or disclaimer noise.
+- Updated `formatDetailText` modal dialog to present structured quota groups and buckets.
+
 ## [1.1.6] — 2026-09-09
 
-### Removed
-- Removed Dependabot configuration (`.github/dependabot.yml`).
-- Removed stale issues and pull requests workflow (`.github/workflows/stale.yml`).
-- Removed CI lint check workflow (`.github/workflows/ci.yml`).
+### Added
+- Integrated official Antigravity Language Server `RetrieveUserQuotaSummary` endpoint for weekly and 5-hour quota tracking by model group (`Gemini Models` and `Claude and GPT models`).
+- Added modern Markdown card layout with colored square progress bars (`🟩` green, `🟨` yellow, `🟥` red, `⬛` dark), 2-decimal percentages, and countdown reset status.
+- Added dynamic extension version resolution in the status bar tooltip header (`Open Quota Antigravity v.<version> by AiBersemi.`).
 
 ## [1.1.5] — 2026-06-30
 

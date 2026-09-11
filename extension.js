@@ -14,8 +14,9 @@ const MAX_PORTS_PER_PROCESS = 8;
 const MAX_TOTAL_PORT_PROBES = 24;
 // Platform detection
 const IS_WINDOWS = process.platform === 'win32';
-// Extension version untuk logging
-const EXT_VERSION = '1.1.2';
+// Extension version dinamis dari package.json
+const packageJson = require('./package.json');
+const EXT_VERSION = packageJson.version || '1.1.6';
 
 // Format waktu 24 jam (HH:mm:ss) untuk tooltip
 function formatTime24(date) {
@@ -23,6 +24,58 @@ function formatTime24(date) {
     const m = String(date.getMinutes()).padStart(2, '0');
     const s = String(date.getSeconds()).padStart(2, '0');
     return `${h}:${m}:${s}`;
+}
+
+// Render visual progress bar dengan balok berwarna (hijau, kuning, merah)
+function renderColoredProgressBar(fraction, length = 12) {
+    const f = Math.max(0, Math.min(1, Number(fraction) || 0));
+    const pct = f * 100;
+    const filled = Math.round(f * length);
+    const empty = length - filled;
+
+    let fillChar = '🟩';
+    if (pct < 20) {
+        fillChar = '🟥';
+    } else if (pct < 50) {
+        fillChar = '🟨';
+    }
+
+    return `[${fillChar.repeat(filled)}${'⬛'.repeat(empty)}]`;
+}
+
+// Format waktu reset / countdown kuota
+function formatResetTime(resetTimeIso, fraction) {
+    const f = Number(fraction) || 0;
+    if (f >= 1.0) {
+        return 'Quota available';
+    }
+    let timeStr = '';
+    if (resetTimeIso) {
+        try {
+            const resetDate = new Date(resetTimeIso);
+            if (!isNaN(resetDate.getTime())) {
+                const diffMs = resetDate.getTime() - Date.now();
+                if (diffMs > 0) {
+                    const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
+                    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                    if (totalHours > 0) {
+                        timeStr = `${totalHours}h ${minutes}m`;
+                    } else {
+                        timeStr = `${minutes}m`;
+                    }
+                }
+            }
+        } catch { /* parse failed; timeStr remains empty */ }
+    }
+
+    const pct = Math.round(f * 100);
+    if (!timeStr) {
+        return f <= 0 ? 'Quota exhausted' : `${pct}% remaining`;
+    }
+    if (f <= 0) {
+        return `Quota exhausted · Refreshes in ${timeStr}`;
+    }
+    return `${pct}% remaining · Refreshes in ${timeStr}`;
 }
 
 /**
@@ -143,63 +196,85 @@ function updateStatusBar(data) {
     }
 
     try {
+        const groups = data.groups || [];
         const models = data.models || [];
 
-        // --- Smart Grouping ---
-        // Gabung Flash & Pro menjadi "Gemini", selain itu menjadi "Claude".
-        // Nilai persentase diambil dari model pertama yang ditemukan (paling atas).
-        const groupMap = new Map(); // shortName -> { shortName, displayPercent, models[] }
-
-        models.forEach(m => {
-            const label = m.label || '';
-            const lower = label.toLowerCase();
-            const pct = Number(m.remaining_percent) || 0;
-
-            let shortName;
-            let priority; // Semakin tinggi = lebih penting untuk ditampilkan
-
-            if (lower.includes('gemini')) {
-                shortName = 'Gemini';
-                priority = 6;
-            } else {
-                shortName = 'Claude';
-                priority = 5;
-            }
-
-            if (!groupMap.has(shortName)) {
-                // displayPercent: ambil dari model pertama yang ditemukan
-                groupMap.set(shortName, { shortName, priority, displayPercent: pct, models: [m] });
-            } else {
-                const g = groupMap.get(shortName);
-                g.models.push(m);
-            }
-        });
-
-        // Konversi ke array dan sort:
-        // 1. Model kritis (< 20%) selalu di kiri
-        // 2. Lalu berdasarkan priority (Gemini > Claude)
-        let displayGroups = Array.from(groupMap.values());
-        displayGroups.sort((a, b) => {
-            const aCrit = a.displayPercent < 20;
-            const bCrit = b.displayPercent < 20;
-            if (aCrit && !bCrit) return -1;
-            if (!aCrit && bCrit) return 1;
-            return b.priority - a.priority;
-        });
-
-        // Susun teks ringkas untuk status bar
+        // --- Susun teks ringkas untuk status bar ---
         let statusTextParts = [];
 
-        displayGroups.forEach(group => {
-            const pct = group.displayPercent;
-            let icon = "🟢";
-            if (pct < 20) icon = "🔴";
-            else if (pct < 50) icon = "🟡";
+        if (groups.length > 0) {
+            // Urutkan grup: Gemini terlebih dahulu, lalu Claude / lainnya
+            const sortedGroups = [...groups].sort((a, b) => {
+                const aName = (a.displayName || '').toLowerCase();
+                const bName = (b.displayName || '').toLowerCase();
+                if (aName.includes('gemini') && !bName.includes('gemini')) return -1;
+                if (!aName.includes('gemini') && bName.includes('gemini')) return 1;
+                return 0;
+            });
 
-            statusTextParts.push(`${icon} ${group.shortName} ${pct.toFixed(0)}%`);
-        });
+            sortedGroups.forEach(group => {
+                const buckets = group.buckets || [];
+                // Prioritaskan 5-hour limit rolling bucket
+                const bucket5h = buckets.find(b => b.window === '5h' || (b.bucketId && b.bucketId.includes('5h')));
+                const bucketWeekly = buckets.find(b => b.window === 'weekly' || (b.bucketId && b.bucketId.includes('weekly')));
 
-        // Fallback: tampilkan persentase credit jika model kosong
+                let targetBucket = bucket5h || buckets[0];
+                if (bucketWeekly && bucketWeekly.remainingFraction < 0.2 && (!bucket5h || bucketWeekly.remainingFraction < bucket5h.remainingFraction)) {
+                    targetBucket = bucketWeekly;
+                }
+
+                if (targetBucket) {
+                    const pct = targetBucket.remainingFraction * 100;
+                    let shortName = 'Claude';
+                    if ((group.displayName || '').toLowerCase().includes('gemini')) {
+                        shortName = 'Gemini';
+                    }
+                    let icon = "🟢";
+                    if (pct < 20) icon = "🔴";
+                    else if (pct < 50) icon = "🟡";
+
+                    statusTextParts.push(`${icon} ${shortName} ${pct.toFixed(0)}%`);
+                }
+            });
+        }
+
+        // Fallback jika grup belum tersedia: gunakan Smart Grouping dari models
+        if (statusTextParts.length === 0 && models.length > 0) {
+            const groupMap = new Map();
+            models.forEach(m => {
+                const label = m.label || '';
+                const lower = label.toLowerCase();
+                const pct = Number(m.remaining_percent) || 0;
+
+                let shortName = lower.includes('gemini') ? 'Gemini' : 'Claude';
+                let priority = lower.includes('gemini') ? 6 : 5;
+
+                if (!groupMap.has(shortName)) {
+                    groupMap.set(shortName, { shortName, priority, displayPercent: pct, models: [m] });
+                } else {
+                    groupMap.get(shortName).models.push(m);
+                }
+            });
+
+            let displayGroups = Array.from(groupMap.values());
+            displayGroups.sort((a, b) => {
+                const aCrit = a.displayPercent < 20;
+                const bCrit = b.displayPercent < 20;
+                if (aCrit && !bCrit) return -1;
+                if (!aCrit && bCrit) return 1;
+                return b.priority - a.priority;
+            });
+
+            displayGroups.forEach(group => {
+                const pct = group.displayPercent;
+                let icon = "🟢";
+                if (pct < 20) icon = "🔴";
+                else if (pct < 50) icon = "🟡";
+                statusTextParts.push(`${icon} ${group.shortName} ${pct.toFixed(0)}%`);
+            });
+        }
+
+        // Fallback: tampilkan persentase credit jika model & group kosong
         if (statusTextParts.length === 0) {
             const availPrompt = data.credits?.prompt?.available || 0;
             const totalPrompt = data.credits?.prompt?.total || 1;
@@ -218,57 +293,66 @@ function updateStatusBar(data) {
         const md = new vscode.MarkdownString();
         md.isTrusted = true;
         md.supportHtml = true;
-        md.appendMarkdown(`**Open Quota Antigravity** v${EXT_VERSION} by AiBersemi\n\n`);
 
-        // Info user & plan
-        if (data.user) {
-            md.appendMarkdown(`👤 ${data.user.name || 'N/A'} — ${data.user.plan || 'Free'}`);
-            if (data.user.tierName) md.appendMarkdown(` (${data.user.tierName})`);
-            md.appendMarkdown(`\n\n`);
+        // Header berversi dinamis sesuai instruksi
+        md.appendMarkdown(`**Open Quota Antigravity** v.${EXT_VERSION} by AiBersemi.\n\n`);
+
+        // Info user & plan (tanpa teks credits)
+        if (data.user && (data.user.name || data.user.email)) {
+            const userParts = [];
+            if (data.user.name && data.user.name !== 'Unknown') {
+                userParts.push(`**${data.user.name}**`);
+            }
+            if (data.user.email) {
+                userParts.push(`(${data.user.email})`);
+            }
+            const planStr = data.user.plan || 'Free';
+            const tierStr = data.user.tierName ? ` (${data.user.tierName})` : '';
+
+            md.appendMarkdown(`👤 ${userParts.join(' ')} — ${planStr}${tierStr}\n\n`);
         }
 
-        // Info credits
-        if (data.credits) {
-            const pAvail = (data.credits.prompt?.available || 0).toLocaleString();
-            const pTotal = (data.credits.prompt?.total || 0).toLocaleString();
-            const fAvail = (data.credits.flow?.available || 0).toLocaleString();
-            const fTotal = (data.credits.flow?.total || 0).toLocaleString();
-            md.appendMarkdown(`💳 Prompt: ${pAvail}/${pTotal} · Flow: ${fAvail}/${fTotal}\n\n`);
-        }
+        // Widget kuota Opsi B: Markdown murni dengan bilah balok berwarna (hijau, kuning, merah)
+        // Tanpa icon bulat hijau, tanpa prompt/flow credits, dan tanpa teks disclaimer
+        if (groups.length > 0) {
+            groups.forEach((g, gIdx) => {
+                if (gIdx > 0) md.appendMarkdown(`\n---\n\n`);
+                else md.appendMarkdown(`---\n\n`);
 
-        // Daftar model per baris (diff codeblock)
-        if (models.length > 0) {
-            let diffContent = "";
-            const sortedModels = [...models].sort((a, b) =>
-                (Number(b.remaining_percent) || 0) - (Number(a.remaining_percent) || 0)
-            );
-
-            sortedModels.forEach(m => {
-                const pct = Number(m.remaining_percent) || 0;
-                let dateStr = "—";
-                if (m.reset_time) {
-                    try {
-                        const d = new Date(m.reset_time);
-                        if (d instanceof Date && !isNaN(d.getTime()) && d.getTime() > 0) {
-                            const day = String(d.getDate()).padStart(2, '0');
-                            const month = String(d.getMonth() + 1).padStart(2, '0');
-                            const hour = String(d.getHours()).padStart(2, '0');
-                            const min = String(d.getMinutes()).padStart(2, '0');
-                            dateStr = `${day}/${month} ${hour}:${min}`;
-                        }
-                    } catch { /* Date parse failed; keep fallback display. */ }
+                md.appendMarkdown(`### ${g.displayName.toUpperCase()}\n`);
+                if (g.description) {
+                    md.appendMarkdown(`*${g.description}*\n\n`);
                 }
 
-                const prefix = pct > 0 ? "+ " : "- ";
-                const name = (m.label || 'Unknown').padEnd(36, ' ');
-                const pctStr = (pct.toFixed(0) + "%").padEnd(6, ' ');
+                (g.buckets || []).forEach(b => {
+                    const frac = b.remainingFraction;
+                    const pct = frac * 100;
+                    const barStr = renderColoredProgressBar(frac, 12);
+                    const statusStr = formatResetTime(b.resetTime, frac);
 
-                diffContent += `${prefix}${name}${pctStr}   ${dateStr}\n`;
+                    md.appendMarkdown(`**${b.displayName}**  \n`);
+                    md.appendMarkdown(`${barStr} **${pct.toFixed(2)}%**  \n`);
+                    md.appendMarkdown(`${statusStr}  \n\n`);
+                });
             });
-            md.appendCodeblock(diffContent, 'diff');
+            md.appendMarkdown(`---\n`);
+        } else if (models.length > 0) {
+            md.appendMarkdown(`---\n\n`);
+            models.forEach(m => {
+                const frac = (Number(m.remaining_percent) || 0) / 100;
+                const barStr = renderColoredProgressBar(frac, 12);
+                const statusStr = formatResetTime(m.reset_time, frac);
+
+                md.appendMarkdown(`**${m.label || 'Unknown'}**  \n`);
+                md.appendMarkdown(`${barStr} **${(frac * 100).toFixed(2)}%**  \n`);
+                md.appendMarkdown(`${statusStr}  \n\n`);
+            });
+            md.appendMarkdown(`---\n`);
         } else {
-            md.appendMarkdown(`_No models found_\n`);
+            md.appendMarkdown(`_No models or quota groups found_\n`);
         }
+
+        // Footer Last Refresh
         md.appendMarkdown(`\n_Last Refresh: ${formatTime24(new Date())}_`);
         myStatusBarItem.tooltip = md;
 
@@ -512,15 +596,7 @@ async function getPorts(pid) {
     return Array.from(ports);
 }
 
-function fetchQuota(port, csrfToken) {
-    // Coba HTTPS dulu (Antigravity pakai self-signed cert), fallback ke HTTP
-    return fetchQuotaWithProtocol(https, port, csrfToken).then(result => {
-        if (result) return result;
-        return fetchQuotaWithProtocol(http, port, csrfToken);
-    });
-}
-
-function fetchQuotaWithProtocol(protocol, port, csrfToken) {
+function fetchRpcWithProtocol(protocol, port, csrfToken, method) {
     return new Promise((resolve) => {
         let settled = false;
         const done = (value) => {
@@ -529,12 +605,11 @@ function fetchQuotaWithProtocol(protocol, port, csrfToken) {
             resolve(value);
         };
 
-        // Request ke language server lokal (loopback)
-        const postData = JSON.stringify({ wrapper_data: {} });
+        const postData = JSON.stringify({ metadata: { ide_name: "antigravity" } });
         const options = {
             hostname: '127.0.0.1',
             port: port,
-            path: '/exa.language_server_pb.LanguageServerService/GetUserStatus',
+            path: `/exa.language_server_pb.LanguageServerService/${method}`,
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -543,7 +618,7 @@ function fetchQuotaWithProtocol(protocol, port, csrfToken) {
                 'Content-Length': Buffer.byteLength(postData)
             },
             timeout: 2000,
-            rejectUnauthorized: false // Self-signed cert pada language server lokal
+            rejectUnauthorized: false
         };
 
         const req = protocol.request(options, (res) => {
@@ -565,16 +640,43 @@ function fetchQuotaWithProtocol(protocol, port, csrfToken) {
     });
 }
 
+async function fetchQuota(port, csrfToken) {
+    for (const proto of [https, http]) {
+        // Probe endpoint resmi RetrieveUserQuotaSummary
+        const quotaSummary = await fetchRpcWithProtocol(proto, port, csrfToken, 'RetrieveUserQuotaSummary');
+        if (quotaSummary && quotaSummary.response) {
+            // Ambil juga GetUserStatus untuk melengkapi info pengguna & kredit
+            const userStatus = await fetchRpcWithProtocol(proto, port, csrfToken, 'GetUserStatus');
+            return {
+                quotaSummary,
+                userStatus
+            };
+        }
+
+        // Fallback: jika RetrieveUserQuotaSummary tidak ada, coba GetUserStatus saja
+        const userStatus = await fetchRpcWithProtocol(proto, port, csrfToken, 'GetUserStatus');
+        if (userStatus && userStatus.userStatus) {
+            return {
+                quotaSummary: null,
+                userStatus
+            };
+        }
+    }
+    return null;
+}
+
 function formatData(data) {
-    // Normalisasi struktur supaya UI konsisten dan mudah dipakai
-    // Mendukung format Antigravity 2026: shared rate limit, sprint/marathon capacity
-    const us = data.userStatus || {};
+    if (!data) return null;
+
+    const rawUserStatus = data.userStatus || data;
+    const rawQuotaSummary = data.quotaSummary;
+
+    const us = rawUserStatus.userStatus || {};
     const ps = us.planStatus || {};
     const pi = ps.planInfo || {};
     const ut = us.userTier || {};
-    const models = (us.cascadeModelConfigData && us.cascadeModelConfigData.clientModelConfigs) || [];
+    const legacyModels = (us.cascadeModelConfigData && us.cascadeModelConfigData.clientModelConfigs) || [];
 
-    // Credits: prioritaskan field terbaru, fallback ke legacy
     const promptAvailable = ps.availablePromptCredits
         ?? ps.availableDailyCredits
         ?? ps.sprintCapacity?.available
@@ -591,6 +693,78 @@ function formatData(data) {
         ?? pi.dailyFlowCredits
         ?? ps.marathonCapacity?.total
         ?? 1;
+
+    let groups = [];
+    if (rawQuotaSummary && rawQuotaSummary.response && Array.isArray(rawQuotaSummary.response.groups)) {
+        groups = rawQuotaSummary.response.groups.map(g => {
+            const buckets = (g.buckets || []).map(b => ({
+                bucketId: b.bucketId || '',
+                displayName: b.displayName || '',
+                description: b.description || '',
+                window: b.window || '',
+                remainingFraction: Number.isFinite(Number(b.remainingFraction)) ? Number(b.remainingFraction) : 0,
+                resetTime: b.resetTime || null
+            }));
+            return {
+                displayName: g.displayName || '',
+                description: g.description || '',
+                buckets
+            };
+        });
+    }
+
+    const models = legacyModels.filter(m => m && m.quotaInfo).map(m => {
+        const qi = m.quotaInfo || {};
+        const fraction = Number(qi.remainingFraction);
+        return {
+            label: m.label || 'Unknown Model',
+            remaining_percent: (Number.isFinite(fraction) ? fraction : 0) * 100,
+            reset_time: qi.resetTime || null
+        };
+    });
+
+    // Fallback sintetis jika grup resmi kosong:
+    if (groups.length === 0 && models.length > 0) {
+        const geminiModels = models.filter(m => (m.label || '').toLowerCase().includes('gemini'));
+        const claudeModels = models.filter(m => !(m.label || '').toLowerCase().includes('gemini'));
+
+        if (geminiModels.length > 0) {
+            const minFrac = Math.min(...geminiModels.map(m => m.remaining_percent / 100));
+            const resetTime = geminiModels.find(m => m.reset_time)?.reset_time || null;
+            groups.push({
+                displayName: 'Gemini Models',
+                description: 'Models within this group: ' + geminiModels.map(m => m.label).slice(0, 3).join(', '),
+                buckets: [
+                    {
+                        bucketId: 'gemini-5h',
+                        displayName: 'Five Hour Limit Remaining',
+                        description: '',
+                        window: '5h',
+                        remainingFraction: minFrac,
+                        resetTime
+                    }
+                ]
+            });
+        }
+        if (claudeModels.length > 0) {
+            const minFrac = Math.min(...claudeModels.map(m => m.remaining_percent / 100));
+            const resetTime = claudeModels.find(m => m.reset_time)?.reset_time || null;
+            groups.push({
+                displayName: 'Claude and GPT models',
+                description: 'Models within this group: ' + claudeModels.map(m => m.label).slice(0, 3).join(', '),
+                buckets: [
+                    {
+                        bucketId: '3p-5h',
+                        displayName: 'Five Hour Limit Remaining',
+                        description: '',
+                        window: '5h',
+                        remainingFraction: minFrac,
+                        resetTime
+                    }
+                ]
+            });
+        }
+    }
 
     return {
         user: {
@@ -610,20 +784,12 @@ function formatData(data) {
                 total: flowTotal
             }
         },
-        models: models.filter(m => m && m.quotaInfo).map(m => {
-            const qi = m.quotaInfo || {};
-            const fraction = Number(qi.remainingFraction);
-            return {
-                label: m.label || 'Unknown Model',
-                remaining_percent: (Number.isFinite(fraction) ? fraction : 0) * 100,
-                reset_time: qi.resetTime || null
-            };
-        })
+        groups,
+        models
     };
 }
 
 function formatDetailText(data) {
-    // Teks detail untuk popup modal
     let tierStr = '';
     if (data.user?.tierName) tierStr = ` — ${data.user.tierName}`;
     const user = `${data.user?.name || 'N/A'} (${data.user?.plan || 'Free'}${tierStr})`;
@@ -634,9 +800,18 @@ function formatDetailText(data) {
     const fTotal = (data.credits?.flow?.total || 0).toLocaleString();
     const credits = `Prompt: ${pAvail} / ${pTotal}\nFlow: ${fAvail} / ${fTotal}`;
 
-    let models = "";
-    if (data.models && data.models.length > 0) {
-        models = data.models.map(m => {
+    let quotaDetails = '';
+    if (data.groups && data.groups.length > 0) {
+        quotaDetails = data.groups.map(g => {
+            const bucketLines = (g.buckets || []).map(b => {
+                const pct = (b.remainingFraction * 100).toFixed(1);
+                const status = formatResetTime(b.resetTime, b.remainingFraction);
+                return `  - ${b.displayName}: ${pct}% (${status})`;
+            }).join('\n');
+            return `${g.displayName}:\n${bucketLines}`;
+        }).join('\n\n');
+    } else if (data.models && data.models.length > 0) {
+        quotaDetails = data.models.map(m => {
             const pct = Number(m.remaining_percent) || 0;
             let resetStr = '';
             if (m.reset_time) {
@@ -651,7 +826,7 @@ function formatDetailText(data) {
         }).join('\n');
     }
 
-    return `User: ${user}\nCredits:\n${credits}\n\nModels:\n${models}`;
+    return `User: ${user}\nCredits:\n${credits}\n\nQuota:\n${quotaDetails}`;
 }
 
 module.exports = {
