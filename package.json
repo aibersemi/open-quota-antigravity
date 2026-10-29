@@ -1,82 +1,97 @@
 {
-	"name": "open-quota-antigravity",
-	"displayName": "Open Quota Antigravity",
-	"description": "Monitor Antigravity (Codeium/Windsurf) quota in real-time from the status bar.",
-	"version": "1.1.7",
-	"icon": "icon.webp",
-	"publisher": "aibersemi",
-	"engines": {
-		"vscode": ">=1.85.0"
-	},
-	"categories": [
-		"Other"
-	],
-	"extensionKind": [
-		"workspace"
-	],
-	"activationEvents": [
-		"onStartupFinished"
-	],
-	"main": "./extension.js",
-	"contributes": {
-		"commands": [
-			{
-				"command": "open-quota-antigravity.refresh",
-				"title": "Open Quota Antigravity: Refresh Status"
-			},
-			{
-				"command": "open-quota-antigravity.showDetail",
-				"title": "Open Quota Antigravity: Show Details"
-			},
-			{
-				"command": "open-quota-antigravity.reload",
-				"title": "Open Quota Antigravity: Reload"
-			},
-			{
-				"command": "open-quota-antigravity.refreshSilent",
-				"title": "Open Quota Antigravity: Refresh (Silent)"
-			}
-		],
-		"configuration": {
-			"title": "Open Quota Antigravity",
-			"properties": {
-				"openQuotaAntigravity.refreshInterval": {
-					"type": "number",
-					"default": 300,
-					"description": "Refresh interval in seconds (min: 30, default: 300 / 5 minutes)"
-				}
-			}
-		}
-	},
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/aibersemi/open-quota-antigravity.git"
-	},
-	"sponsor": {
-		"url": "https://saweria.co/aibersemi"
-	},
-	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
-		"lint": "eslint extension.js --max-warnings=0",
-		"lint:strict": "eslint extension.js --no-config-lookup --no-ignore --max-warnings=0 --global require --global module --global process --global Buffer --global console --global setTimeout --global setInterval --global clearInterval --global __dirname --rule 'no-unused-vars:error' --rule 'no-undef:error' --rule 'no-empty:error'"
-	},
-	"keywords": [
-		"quota",
-		"antigravity",
-		"codeium",
-		"windsurf",
-		"monitor",
-		"status bar"
-	],
-	"author": "aibersemi",
-	"type": "commonjs",
-	"bugs": {
-		"url": "https://github.com/aibersemi/open-quota-antigravity/issues"
-	},
-	"homepage": "https://github.com/aibersemi/open-quota-antigravity#readme",
-	"devDependencies": {
-		"@eslint/js": "^10.0.1",
-		"eslint": "^10.7.0"
-	}
+  "name": "open-quota-antigravity",
+  "displayName": "Open Quota Antigravity",
+  "description": "Monitor Antigravity (Codeium/Windsurf) quota in real-time from the status bar.",
+  "version": "1.1.7",
+  "icon": "icon.webp",
+  "publisher": "aibersemi",
+  "engines": {
+    "vscode": ">=1.85.0",
+    "node": "24.22.1",
+    "npm": "12.2.1"
+  },
+  "categories": [
+    "Other"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "open-quota-antigravity.refresh",
+        "title": "Open Quota Antigravity: Refresh Status"
+      },
+      {
+        "command": "open-quota-antigravity.showDetail",
+        "title": "Open Quota Antigravity: Show Details"
+      },
+      {
+        "command": "open-quota-antigravity.reload",
+        "title": "Open Quota Antigravity: Reload"
+      },
+      {
+        "command": "open-quota-antigravity.refreshSilent",
+        "title": "Open Quota Antigravity: Refresh (Silent)"
+      }
+    ],
+    "configuration": {
+      "title": "Open Quota Antigravity",
+      "properties": {
+        "openQuotaAntigravity.refreshInterval": {
+          "type": "number",
+          "default": 300,
+          "description": "Refresh interval in seconds (min: 30, default: 300 / 5 minutes)"
+        }
+      }
+    }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aibersemi/open-quota-antigravity.git"
+  },
+  "sponsor": {
+    "url": "https://saweria.co/aibersemi"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint extension.js --max-warnings=0",
+    "lint:strict": "eslint extension.js --no-config-lookup --no-ignore --max-warnings=0 --global require --global module --global process --global Buffer --global console --global setTimeout --global setInterval --global clearInterval --global __dirname --rule 'no-unused-vars:error' --rule 'no-undef:error' --rule 'no-empty:error'"
+  },
+  "keywords": [
+    "quota",
+    "antigravity",
+    "codeium",
+    "windsurf",
+    "monitor",
+    "status bar"
+  ],
+  "author": "aibersemi",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/aibersemi/open-quota-antigravity/issues"
+  },
+  "homepage": "https://github.com/aibersemi/open-quota-antigravity#readme",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0"
+  },
+  "packageManager": "npm@12.2.1",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "24.22.1",
+      "onFail": "error"
+    },
+    "packageManager": {
+      "name": "npm",
+      "version": "12.2.1",
+      "onFail": "error"
+    }
+  }
 }

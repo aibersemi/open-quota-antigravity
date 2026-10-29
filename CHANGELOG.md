@@ -2,6 +2,11 @@
 
 All notable changes to **Open Quota Antigravity** are documented here.
 
+## [Unreleased]
+
+### Changed
+- Standardized development tooling on Node.js 24.22.1 and npm 12.2.1 with exact version enforcement.
+
 ## [1.1.7] — 2026-09-11
 
 ### Changed
