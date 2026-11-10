@@ -16,7 +16,7 @@ const MAX_TOTAL_PORT_PROBES = 24;
 const IS_WINDOWS = process.platform === 'win32';
 // Extension version dinamis dari package.json
 const packageJson = require('./package.json');
-const EXT_VERSION = packageJson.version || '1.1.8';
+const EXT_VERSION = packageJson.version || '1.1.9';
 
 // Format waktu 24 jam (HH:mm:ss) untuk tooltip
 function formatTime24(date) {

@@ -2,7 +2,7 @@
 
 All notable changes to **Open Quota Antigravity** are documented here.
 
-## [1.1.8] — 2026-11-10
+## [1.1.9] — 2026-11-10
 
 ### Changed
 - Updated extension description in `package.json` to `"Monitor Antigravity Quota in real time from the IDE status bar."`.

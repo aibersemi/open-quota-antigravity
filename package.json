@@ -2,7 +2,7 @@
 	"name": "open-quota-antigravity",
 	"displayName": "Open Quota Antigravity",
 	"description": "Monitor Antigravity Quota in real time from the IDE status bar.",
-	"version": "1.1.8",
+	"version": "1.1.9",
 	"icon": "icon.webp",
 	"publisher": "aibersemi",
 	"engines": {
