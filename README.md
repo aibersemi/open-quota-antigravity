@@ -20,20 +20,20 @@
 
 ## 🚀 What It Does
 
-- **Real-time Monitoring:** Instantly see the remaining percentage of your available models (Gemini Flash/Pro, Claude Opus/Sonnet, GPT, etc.).
-- **Smart Grouping:** Models are smartly grouped into **Gemini** and **Claude** categories based on priority. The displayed percentage for each group is taken from the highest-priority model found in that group, giving you an immediate sense of your available quota.
-- **Fallback Indicator:** If no models are found, the extension gracefully falls back to showing your overall **Credits** percentage.
-- **Shared Quota Awareness:** Reflects Antigravity 2026's shared rate limit pool for Gemini models and the unified quota for non-Gemini models.
+- **Real-time Monitoring:** Instantly see the remaining percentage of your available model groups (Gemini Flash/Pro, Gemini 4 Argon, Claude Opus/Sonnet, GPT, etc.).
+- **Smart Grouping:** Models and quota pools are smartly grouped into **Gemini**, **Argon**, and **Claude** categories in the status bar (`🟢 Gemini 98%  🟢 Argon 64%  🔴 Claude 0%`), prioritizing the 5-hour rolling limit and alerting you when the weekly limit runs low (< 20%).
+- **Fallback Indicator:** If no model groups are found, the extension gracefully falls back to showing your overall **Credits** percentage.
+- **Shared Quota Awareness:** Reflects Antigravity's official `RetrieveUserQuotaSummary` groups (Weekly & Five Hour rolling limits) across Gemini, Gemini 4 Argon, and Claude/GPT pools.
 - **Smart Indicators:** Visual feedback with colors to warn you when running low:
-  - 🟢 **Green:** Plenty of quota (> 50%)
-  - 🟡 **Yellow:** Running low (< 50%)
+  - 🟢 **Green:** Plenty of quota (≥ 50%)
+  - 🟡 **Yellow:** Running low (20% – 49%)
   - 🔴 **Red:** Critical/Exhausted (< 20%)
-- **Zero Configuration:** Automatically detects the running language server process. No API keys or manual setup required.
-- **HTTPS Support:** Fully compatible with Antigravity's HTTPS-based language server (self-signed certificates handled automatically).
-- **Detailed Insights:** Hover over the status bar item to see a full breakdown, including:
-  - User name, plan, and tier info
-  - Prompt and Flow credit usage (Sprint & Marathon capacity)
-  - Exact quota percentages and reset timestamps for each model
+- **Zero Configuration:** Automatically connects via the built-in Antigravity extension or detects the running `agy --hub` / `language_server` process. No API keys or manual setup required.
+- **HTTP & HTTPS Support:** Compatible with both Antigravity's modern HTTP `agy --hub` server and HTTPS-based language servers (self-signed certificates handled automatically).
+- **Detailed Insights:** Hover over the status bar item to see a clean Markdown breakdown, including:
+  - User name, email, plan, and tier info
+  - Visual colored progress bars (`🟩` `🟨` `🟥` `⬛`) with 2-decimal precision for **Weekly** and **Five Hour** limits
+  - Countdown reset timers (e.g., `Refreshes in 3h 59m`)
 
 ---
 
@@ -43,11 +43,11 @@
    - Install this extension from the Marketplace or VSIX.
    - Ensure the official **Antigravity** or **Codeium** extension is installed and you are logged in.
 2. **Check Status Bar:**
-   - Look at the bottom-right of your VS Code window.
-   - You should see indicators like `🟢 Gemini 100%  🟢 Claude 20%` (or a fallback like `✔️ Credits: 100%`).
+   - Look at the bottom-right of your VS Code / Antigravity IDE window.
+   - You should see indicators like `🟢 Gemini 98%  🟢 Argon 64%  🔴 Claude 0%` (or a fallback like `✔️ Credits: 100%`).
 3. **Get Details:**
-   - **Hover** over the status indicator to see a rich tooltip with all model details.
-   - Use command palette `Open Quota Antigravity: Show Details` for a full popup.
+   - **Hover** over the status indicator to see a rich tooltip with all quota groups, visual bars, and reset timers.
+   - Click the status bar item to trigger a silent refresh, or use command palette `Open Quota Antigravity: Show Details` for a modal summary.
 
 ---
 
@@ -61,8 +61,8 @@
 
 ## ℹ️ Requirements
 
-- **Visual Studio Code** v1.85.0 or newer (or compatible fork: Antigravity, Windsurf, Cursor).
-- An active **Antigravity** or **Codeium** session (the language server process must be running).
+- **Visual Studio Code** v1.85.0 or newer (or compatible fork: Antigravity IDE, Windsurf, Cursor).
+- An active **Antigravity** or **Codeium** session (`agy --hub` or `language_server` process must be running).
 
 ---
 
@@ -74,11 +74,11 @@
 **Q: Does it work on Mac/Linux?**
 > **Yes!** It supports Windows, macOS, and Linux out of the box.
 
-**Q: Does it support HTTPS language servers?**
-> **Yes!** The extension automatically tries HTTPS first (with self-signed certificate support) and falls back to HTTP for backward compatibility.
+**Q: Does it support both `agy --hub` and HTTPS language servers?**
+> **Yes!** The extension supports the latest Antigravity IDE `agy --hub` server over HTTP and automatically falls back to HTTPS (with self-signed certificate support) for legacy `language_server` instances.
 
-**Q: Does it support the new Antigravity 2026 shared quota?**
-> **Yes!** The extension handles both legacy per-model quotas and the new unified Gemini rate limit pool.
+**Q: Does it support the new Antigravity shared quota and Gemini 4 Argon?**
+> **Yes!** The extension tracks 5-hour and weekly rolling limits across **Gemini**, **Gemini 4 Argon**, and **Claude/GPT** quota groups, while retaining backward compatibility with legacy per-model quotas.
 
 ---
 
