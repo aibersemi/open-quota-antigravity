@@ -90,7 +90,7 @@ If this extension saves you time, you can support its development through [Sawer
 
 ## 📄 License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [MIT License](https://github.com/aibersemi/open-quota-antigravity/blob/HEAD/LICENSE).
 
 ---
 

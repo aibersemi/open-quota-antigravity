@@ -2,10 +2,18 @@
 
 All notable changes to **Open Quota Antigravity** are documented here.
 
-## [Unreleased]
+## [1.1.8] — 2026-11-10
 
 ### Changed
-- Standardized development tooling on Node.js 24.22.1 and npm 12.2.1 with exact version enforcement.
+- Updated extension description in `package.json` to `"Monitor Antigravity Quota in real time from the IDE status bar."`.
+- Updated status bar short label for `Gemini 4 Argon` quota group to display as `Argon` (e.g., `🟢 Gemini 98%  🟢 Argon 64%  🔴 Claude 0%`).
+
+### Fixed
+- Added support for calculating and grouping `Gemini 4 Argon` model quota separately from standard `Gemini` models.
+- Fixed `Could not connect to language server or find process.` (`Quota Error`) on newer Antigravity IDE versions where the backend server runs as `agy --hub` instead of `language_server`.
+- Added direct connection lookup via the built-in `google.google-antigravity` extension API (`port` and `csrfToken`) with automatic fallback to process discovery.
+- Updated `findProcesses()` to detect server processes by `csrf_token` and added `parseCmdlinePorts()` to extract `--hub-port` directly from process arguments.
+- Prioritized HTTP before HTTPS when probing local loopback endpoints and added automatic startup retries while the Antigravity server initializes.
 
 ## [1.1.7] — 2026-09-11
 

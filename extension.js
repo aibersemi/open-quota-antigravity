@@ -16,7 +16,7 @@ const MAX_TOTAL_PORT_PROBES = 24;
 const IS_WINDOWS = process.platform === 'win32';
 // Extension version dinamis dari package.json
 const packageJson = require('./package.json');
-const EXT_VERSION = packageJson.version || '1.1.6';
+const EXT_VERSION = packageJson.version || '1.1.8';
 
 // Format waktu 24 jam (HH:mm:ss) untuk tooltip
 function formatTime24(date) {
@@ -149,8 +149,19 @@ function startPolling() {
     // Tampilkan loading state terlebih dahulu agar tidak blank
     myStatusBarItem.text = "$(sync~spin) Quota...";
     myStatusBarItem.show();
-    // Update awal agar status bar langsung terisi
-    checkQuotaGuarded().then(updateStatusBar);
+
+    // Update awal dengan retry singkat jika server Antigravity masih proses startup
+    const initialCheckWithRetry = async () => {
+        const retryDelaysMs = [2000, 4000, 6000];
+        let data = await checkQuotaGuarded();
+        for (const delay of retryDelaysMs) {
+            if (data) break;
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            data = await checkQuotaGuarded();
+        }
+        updateStatusBar(data);
+    };
+    initialCheckWithRetry();
 
     const config = vscode.workspace.getConfiguration('openQuotaAntigravity');
     let intervalSec = Number(config.get('refreshInterval'));
@@ -203,13 +214,16 @@ function updateStatusBar(data) {
         let statusTextParts = [];
 
         if (groups.length > 0) {
-            // Urutkan grup: Gemini terlebih dahulu, lalu Claude / lainnya
+            const getGroupOrder = (displayName) => {
+                const name = (displayName || '').toLowerCase();
+                if (name.includes('argon')) return 2;
+                if (name.includes('gemini')) return 1;
+                return 3;
+            };
+
+            // Urutkan grup: Gemini terlebih dahulu, lalu Argon, lalu Claude / lainnya
             const sortedGroups = [...groups].sort((a, b) => {
-                const aName = (a.displayName || '').toLowerCase();
-                const bName = (b.displayName || '').toLowerCase();
-                if (aName.includes('gemini') && !bName.includes('gemini')) return -1;
-                if (!aName.includes('gemini') && bName.includes('gemini')) return 1;
-                return 0;
+                return getGroupOrder(a.displayName) - getGroupOrder(b.displayName);
             });
 
             sortedGroups.forEach(group => {
@@ -225,8 +239,11 @@ function updateStatusBar(data) {
 
                 if (targetBucket) {
                     const pct = targetBucket.remainingFraction * 100;
+                    const lowerName = (group.displayName || '').toLowerCase();
                     let shortName = 'Claude';
-                    if ((group.displayName || '').toLowerCase().includes('gemini')) {
+                    if (lowerName.includes('argon')) {
+                        shortName = 'Argon';
+                    } else if (lowerName.includes('gemini')) {
                         shortName = 'Gemini';
                     }
                     let icon = "🟢";
@@ -246,8 +263,15 @@ function updateStatusBar(data) {
                 const lower = label.toLowerCase();
                 const pct = Number(m.remaining_percent) || 0;
 
-                let shortName = lower.includes('gemini') ? 'Gemini' : 'Claude';
-                let priority = lower.includes('gemini') ? 6 : 5;
+                let shortName = 'Claude';
+                let priority = 4;
+                if (lower.includes('argon')) {
+                    shortName = 'Argon';
+                    priority = 5;
+                } else if (lower.includes('gemini')) {
+                    shortName = 'Gemini';
+                    priority = 6;
+                }
 
                 if (!groupMap.has(shortName)) {
                     groupMap.set(shortName, { shortName, priority, displayPercent: pct, models: [m] });
@@ -364,12 +388,40 @@ function updateStatusBar(data) {
 
 // --- Logic (Merged) ---
 
+function getExtensionConnectionInfo() {
+    try {
+        const extIds = ['google.google-antigravity', 'google.antigravity'];
+        for (const id of extIds) {
+            const ext = vscode.extensions?.getExtension(id);
+            if (ext && ext.isActive && ext.exports) {
+                const csrfToken = ext.exports.csrfToken || ext.exports.client?.csrfToken;
+                const port = Number(ext.exports.port || ext.exports.client?.port);
+                if (csrfToken && Number.isInteger(port) && port > 0 && port <= 65535) {
+                    return { port, csrfToken };
+                }
+            }
+        }
+    } catch {
+        /* Extension API lookup unavailable; fall back to process discovery. */
+    }
+    return null;
+}
+
 async function checkQuota() {
     try {
-        // 1) Cari semua proses language_server
+        // 0) Fast-path: gunakan koneksi langsung dari ekstensi bawaan Google Antigravity (agy) jika tersedia
+        const extInfo = getExtensionConnectionInfo();
+        if (extInfo) {
+            const extRes = await fetchQuota(extInfo.port, extInfo.csrfToken);
+            if (extRes) {
+                return formatData(extRes);
+            }
+        }
+
+        // 1) Cari semua proses server Antigravity (agy --hub / language_server)
         const procs = await findProcesses();
         if (procs.length === 0) {
-            console.log('[open-quota-antigravity] Tidak ditemukan proses language_server');
+            console.log('[open-quota-antigravity] Tidak ditemukan proses language_server / agy');
             return null;
         }
         let probeCount = 0;
@@ -379,15 +431,29 @@ async function checkQuota() {
             const csrfToken = parseCsrfToken(proc.cmdline);
             if (!csrfToken) continue;
 
-            // 3) Cari port yang listen pada PID ini
-            const ports = await getPorts(proc.pid);
-            const limitedPorts = ports.slice(0, MAX_PORTS_PER_PROCESS);
+            // 3a) Coba port eksplisit dari argumen command line terlebih dahulu (mis. --hub-port)
+            const cmdPorts = parseCmdlinePorts(proc.cmdline);
+            for (const port of cmdPorts.slice(0, MAX_PORTS_PER_PROCESS)) {
+                if (probeCount >= MAX_TOTAL_PORT_PROBES) {
+                    return null;
+                }
+                probeCount++;
+                const res = await fetchQuota(port, csrfToken);
+                if (res) {
+                    return formatData(res);
+                }
+            }
+
+            // 3b) Fallback: cari semua port yang listen pada PID ini
+            const sysPorts = await getPorts(proc.pid);
+            const remainingPorts = sysPorts.filter(p => !cmdPorts.includes(p));
+            const limitedPorts = remainingPorts.slice(0, Math.max(0, MAX_PORTS_PER_PROCESS - cmdPorts.length));
             for (const port of limitedPorts) {
                 if (probeCount >= MAX_TOTAL_PORT_PROBES) {
                     return null;
                 }
                 probeCount++;
-                // 4) Panggil endpoint GetUserStatus lokal
+                // 4) Panggil endpoint kuota lokal
                 const res = await fetchQuota(port, csrfToken);
                 if (res) {
                     // 5) Normalisasi data agar konsisten di UI
@@ -414,11 +480,11 @@ function execAsync(command, options = {}) {
 }
 
 /**
- * Robust process finder (merged from CLI version)
+ * Robust process finder (mendukung proses agy --hub terbaru maupun language_server)
  */
 async function findProcesses() {
     const results = [];
-    const searchString = 'language_server';
+    const searchString = 'csrf_token';
     // Sanitize searchString for safe shell usage: allow only alphanumeric, underscore, and hyphen
     const safeSearchString = searchString.replace(/[^a-zA-Z0-9_-]/g, '');
 
@@ -427,24 +493,25 @@ async function findProcesses() {
         const psCommand = `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${safeSearchString}*' } | Select-Object ProcessId, CommandLine | ConvertTo-Json -Compress`;
         try {
             const stdout = await execAsync(`powershell -NoProfile -Command "${psCommand.replace(/"/g, '\\"')}"`);
-            if (!stdout || !stdout.trim()) return [];
-
-            let processes = [];
-            try {
-                const parsed = JSON.parse(stdout.trim());
-                processes = Array.isArray(parsed) ? parsed : (parsed ? [parsed] : []);
-            } catch (e) {
-                console.warn('[open-quota-antigravity] JSON parse error (PowerShell):', e.message);
-                return [];
-            }
-
-            processes.forEach(p => {
-                if (p.ProcessId && p.CommandLine) {
-                    results.push({ pid: p.ProcessId, cmdline: p.CommandLine });
+            if (stdout && stdout.trim()) {
+                let processes = [];
+                try {
+                    const parsed = JSON.parse(stdout.trim());
+                    processes = Array.isArray(parsed) ? parsed : (parsed ? [parsed] : []);
+                } catch (e) {
+                    console.warn('[open-quota-antigravity] JSON parse error (PowerShell):', e.message);
                 }
-            });
-        } catch {
-            // Fallback to wmic
+
+                processes.forEach(p => {
+                    if (p.ProcessId && p.CommandLine && parseCsrfToken(p.CommandLine)) {
+                        results.push({ pid: p.ProcessId, cmdline: p.CommandLine });
+                    }
+                });
+            }
+        } catch { /* PowerShell lookup failed; continue to WMIC fallback. */ }
+
+        // Fallback to wmic jika PowerShell gagal atau tidak menemukan proses
+        if (results.length === 0) {
             try {
                 const wmicOut = await execAsync(`wmic process where "CommandLine like '%${safeSearchString}%'" get ProcessId,CommandLine /format:csv`);
                 const lines = wmicOut.split('\n');
@@ -457,7 +524,9 @@ async function findProcesses() {
                         const lastIdx = parts.length - 1;
                         const pid = parseInt(parts[lastIdx], 10);
                         const cmdline = parts.slice(1, lastIdx).join(',');
-                        if (!isNaN(pid) && pid > 0) results.push({ pid, cmdline });
+                        if (!isNaN(pid) && pid > 0 && parseCsrfToken(cmdline)) {
+                            results.push({ pid, cmdline });
+                        }
                     }
                 });
             } catch { /* WMIC fallback failed; return any collected results. */ }
@@ -475,11 +544,13 @@ async function findProcesses() {
                         if (firstSpace > 0) {
                             const pid = parseInt(line.substring(0, firstSpace));
                             const cmdline = line.substring(firstSpace + 1);
-                            results.push({ pid, cmdline });
+                            if (parseCsrfToken(cmdline)) {
+                                results.push({ pid, cmdline });
+                            }
                         }
                     }
                     if (results.length > 0) {
-                        return results.filter(p => parseCsrfToken(p.cmdline));
+                        return results;
                     }
                 } catch { /* pgrep unavailable or failed; continue with ps fallback. */ }
             }
@@ -493,22 +564,44 @@ async function findProcesses() {
                 if (firstSpace > 0) {
                     const pid = parseInt(trimmed.substring(0, firstSpace));
                     const cmdline = trimmed.substring(firstSpace + 1);
-                    if (cmdline.includes(searchString)) {
+                    if (cmdline.includes(searchString) || cmdline.includes('language_server')) {
                         results.push({ pid, cmdline });
                     }
                 }
             }
         } catch { /* Process lookup failed; return any collected results. */ }
     }
-    return results.filter(p => parseCsrfToken(p.cmdline));
+
+    const validProcs = results.filter(p => parseCsrfToken(p.cmdline));
+    validProcs.sort((a, b) => {
+        const aScore = /agy|language_server|antigravity/i.test(a.cmdline) ? 1 : 0;
+        const bScore = /agy|language_server|antigravity/i.test(b.cmdline) ? 1 : 0;
+        return bScore - aScore;
+    });
+    return validProcs;
 }
 
 function parseCsrfToken(cmdline) {
+    if (!cmdline || typeof cmdline !== 'string') return null;
     // Ambil nilai setelah --csrf_token (format --csrf_token=... atau --csrf_token ...)
     // Mendukung token dengan atau tanpa tanda kutip
     const regex = /--csrf_token[=\s]+(?:["']([^"']+)["']|([^\s"']+))/;
     const match = cmdline.match(regex);
     return match ? (match[1] || match[2] || null) : null;
+}
+
+function parseCmdlinePorts(cmdline) {
+    if (!cmdline || typeof cmdline !== 'string') return [];
+    const ports = [];
+    const regex = /--(?:hub[-_]?port|extension[-_]?server[-_]?port|server[-_]?port|port)[=\s]+(?:["']?(\d{1,5})["']?)/gi;
+    let match;
+    while ((match = regex.exec(cmdline)) !== null) {
+        const port = parseInt(match[1], 10);
+        if (Number.isInteger(port) && port > 0 && port <= 65535 && !ports.includes(port)) {
+            ports.push(port);
+        }
+    }
+    return ports;
 }
 
 async function getPorts(pid) {
@@ -641,10 +734,10 @@ function fetchRpcWithProtocol(protocol, port, csrfToken, method) {
 }
 
 async function fetchQuota(port, csrfToken) {
-    for (const proto of [https, http]) {
+    for (const proto of [http, https]) {
         // Probe endpoint resmi RetrieveUserQuotaSummary
         const quotaSummary = await fetchRpcWithProtocol(proto, port, csrfToken, 'RetrieveUserQuotaSummary');
-        if (quotaSummary && quotaSummary.response) {
+        if (quotaSummary && (quotaSummary.response || Array.isArray(quotaSummary.groups))) {
             // Ambil juga GetUserStatus untuk melengkapi info pengguna & kredit
             const userStatus = await fetchRpcWithProtocol(proto, port, csrfToken, 'GetUserStatus');
             return {
@@ -655,7 +748,7 @@ async function fetchQuota(port, csrfToken) {
 
         // Fallback: jika RetrieveUserQuotaSummary tidak ada, coba GetUserStatus saja
         const userStatus = await fetchRpcWithProtocol(proto, port, csrfToken, 'GetUserStatus');
-        if (userStatus && userStatus.userStatus) {
+        if (userStatus && (userStatus.userStatus || userStatus.response?.userStatus)) {
             return {
                 quotaSummary: null,
                 userStatus
@@ -671,7 +764,7 @@ function formatData(data) {
     const rawUserStatus = data.userStatus || data;
     const rawQuotaSummary = data.quotaSummary;
 
-    const us = rawUserStatus.userStatus || {};
+    const us = rawUserStatus?.userStatus || rawUserStatus?.response?.userStatus || {};
     const ps = us.planStatus || {};
     const pi = ps.planInfo || {};
     const ut = us.userTier || {};
@@ -695,8 +788,9 @@ function formatData(data) {
         ?? 1;
 
     let groups = [];
-    if (rawQuotaSummary && rawQuotaSummary.response && Array.isArray(rawQuotaSummary.response.groups)) {
-        groups = rawQuotaSummary.response.groups.map(g => {
+    const summaryObj = rawQuotaSummary?.response || rawQuotaSummary;
+    if (summaryObj && Array.isArray(summaryObj.groups)) {
+        groups = summaryObj.groups.map(g => {
             const buckets = (g.buckets || []).map(b => ({
                 bucketId: b.bucketId || '',
                 displayName: b.displayName || '',
@@ -725,8 +819,15 @@ function formatData(data) {
 
     // Fallback sintetis jika grup resmi kosong:
     if (groups.length === 0 && models.length > 0) {
-        const geminiModels = models.filter(m => (m.label || '').toLowerCase().includes('gemini'));
-        const claudeModels = models.filter(m => !(m.label || '').toLowerCase().includes('gemini'));
+        const argonModels = models.filter(m => (m.label || '').toLowerCase().includes('argon'));
+        const geminiModels = models.filter(m => {
+            const lower = (m.label || '').toLowerCase();
+            return lower.includes('gemini') && !lower.includes('argon');
+        });
+        const claudeModels = models.filter(m => {
+            const lower = (m.label || '').toLowerCase();
+            return !lower.includes('gemini') && !lower.includes('argon');
+        });
 
         if (geminiModels.length > 0) {
             const minFrac = Math.min(...geminiModels.map(m => m.remaining_percent / 100));
@@ -740,6 +841,24 @@ function formatData(data) {
                         displayName: 'Five Hour Limit Remaining',
                         description: '',
                         window: '5h',
+                        remainingFraction: minFrac,
+                        resetTime
+                    }
+                ]
+            });
+        }
+        if (argonModels.length > 0) {
+            const minFrac = Math.min(...argonModels.map(m => m.remaining_percent / 100));
+            const resetTime = argonModels.find(m => m.reset_time)?.reset_time || null;
+            groups.push({
+                displayName: 'Gemini 4 Argon',
+                description: 'Models within this group: ' + argonModels.map(m => m.label).slice(0, 3).join(', '),
+                buckets: [
+                    {
+                        bucketId: 'argon-weekly',
+                        displayName: 'Gemini 4 Argon Weekly Limit',
+                        description: '',
+                        window: 'weekly',
                         remainingFraction: minFrac,
                         resetTime
                     }
